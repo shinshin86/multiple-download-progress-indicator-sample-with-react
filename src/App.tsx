@@ -137,17 +137,17 @@ function App() {
 
     // [issue]
     // If you do not allow a little interval, some files may not be downloaded in some cases.
-    await sleep(100);
+    await sleep(300);
 
     return downloadFile;
   };
 
   const parallelDownload = async (promises: DownloadPromises) => {
+    let i = 0;
+
     // Check the maximum number of downloads to be processed in parallel.
     const runPromises = ((limit: number) => {
-      let i = 0;
-
-      return async (promises: DownloadPromises) => {
+      return () => {
         if (!promises.length && !i) {
           console.log("Finish!");
           return;
@@ -162,17 +162,23 @@ function App() {
           }
 
           const { promise, file } = downloadPromise;
-          const downloadFile = await promise(file);
-          console.log("Download file name: ", downloadFile.fileName);
 
-          --i;
+          promise(file)
+            .then((downloadFile: DownloadFile) => {
+              console.log("Download file name: ", downloadFile.fileName);
 
-          await runPromises(promises);
+              --i;
+
+              runPromises();
+            })
+            .catch((error: any) => {
+              console.error(error)
+            });
         }
       };
     })(MAX_NUMBER_CONCURRENCIES);
 
-    await runPromises(promises);
+    runPromises();
   };
 
   return (
